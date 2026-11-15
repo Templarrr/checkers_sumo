@@ -8,6 +8,10 @@ export const BOARD_SIZE = 8;
 export const HALF = BOARD_SIZE / 2;
 export const PIECES_PER_SIDE = 8;
 export const PIECE_RADIUS = 0.4;
+// The frame around the cells is part of the playing surface: a piece only falls once its
+// centre is past the frame's outer edge.
+export const FRAME_MARGIN = 0.75;
+export const PLAY_HALF = HALF + FRAME_MARGIN;
 
 // Row 0 is a side's own back row. Once the two rows are adjacent there is no room to advance
 // without pushing the loser back.

@@ -1,3 +1,4 @@
+import { Vector3 } from 'three';
 import './style.css';
 import { createSound } from './audio/sound.js';
 import { DARK, LIGHT } from './game/constants.js';
@@ -139,4 +140,14 @@ startRound(state);
 window.checkersSumo = {
   getState: () => state,
   shoot: (shot) => aim.shoot(shot),
+  // Where a piece is on screen, in CSS pixels, so a script can drag it like a player would.
+  screenOf(pieceId) {
+    const piece = state.pieces.find((p) => p.id === pieceId);
+    const point = new Vector3(piece.x, 0, piece.z).project(camera);
+    const rect = renderer.domElement.getBoundingClientRect();
+    return {
+      x: rect.left + ((point.x + 1) / 2) * rect.width,
+      y: rect.top + ((1 - point.y) / 2) * rect.height,
+    };
+  },
 };

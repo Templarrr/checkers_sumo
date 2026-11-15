@@ -73,21 +73,33 @@ export function shotError(state, { pieceId, vx, vz }) {
   return null;
 }
 
-const clampSpeed = ({ pieceId, vx, vz }) => {
-  const speed = Math.hypot(vx, vz);
-  const scale = speed > MAX_SPEED ? MAX_SPEED / speed : 1;
-  return { pieceId, vx: vx * scale, vz: vz * scale };
-};
+// A real flick never goes exactly where it was aimed, and the harder it is the further off it can
+// go: up to this many degrees either way at the weakest and the strongest shot.
+export const MIN_SPREAD_DEGREES = 3;
+export const MAX_SPREAD_DEGREES = 10;
+
+export const spreadDegrees = (power) =>
+  MIN_SPREAD_DEGREES + (MAX_SPREAD_DEGREES - MIN_SPREAD_DEGREES) * power;
+
+/** Caps the speed and turns the shot by a random angle within its spread. */
+export function scatterShot({ pieceId, vx, vz }, random = Math.random) {
+  const speed = Math.min(Math.hypot(vx, vz), MAX_SPEED);
+  const spread = (spreadDegrees(speed / MAX_SPEED) * Math.PI) / 180;
+  const angle = Math.atan2(vz, vx) + (random() * 2 - 1) * spread;
+  return { pieceId, vx: Math.cos(angle) * speed, vz: Math.sin(angle) * speed };
+}
 
 /**
- * Plays `shot` for the side to move and applies the Chapaev rules to the result.
- * Returns the new state and the simulation, which the renderer replays.
+ * Plays `shot` for the side to move, as aimed but scattered by `random`, and applies the
+ * Chapaev rules to the result. Returns the new state, the shot as actually played and the
+ * simulation, which the renderer replays.
  */
-export function playShot(state, shot) {
+export function playShot(state, shot, { random = Math.random } = {}) {
   const error = shotError(state, shot);
   if (error) throw new Error(error);
   const shooter = state.turn;
-  const simulation = simulateShot(state.pieces, clampSpeed(shot));
+  const played = scatterShot(shot, random);
+  const simulation = simulateShot(state.pieces, played);
   const pieces = simulation.pieces.filter((p) => p.onBoard);
 
   const lost = (color) => countPieces(state.pieces, color) - countPieces(pieces, color);
@@ -119,7 +131,7 @@ export function playShot(state, shot) {
       if (next.nextRows[opponent(winner)] < 0) next.matchWinner = winner;
     }
   }
-  return { state: next, simulation };
+  return { state: next, shot: played, simulation };
 }
 
 export function nextRound(state) {

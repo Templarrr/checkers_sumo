@@ -6,7 +6,7 @@ traditional Chapaev rules, rendered in 3D with [three.js](https://threejs.org/).
 **Play it:** https://templarrr.github.io/checkers_sumo/ (once GitHub Pages is switched on, see
 [Deploying](#deploying-to-github-pages))
 
-![Dark aims a flick: the arrow shows the direction and strength of the shot](docs/screenshots/desktop.png)
+![Dark aims a flick: the sector shows where the shot may go, wider and redder the harder it is](docs/screenshots/desktop.png)
 
 <img src="docs/screenshots/mobile.png" alt="The same moment on a phone in portrait" width="300">
 
@@ -14,8 +14,11 @@ traditional Chapaev rules, rendered in 3D with [three.js](https://threejs.org/).
 
 - Each side has 8 checkers. In the first round Light lines up on its back row and Dark on the
   opposite back row. Light shoots first.
-- On your turn you flick one of your own checkers. Every checker that ends up past the edge of
-  the board falls off and is out of the round.
+- On your turn you flick one of your own checkers. The board has a wooden frame around the
+  cells; a checker that stops on the frame is still in play. Every checker whose centre ends up
+  past the outer edge of the frame falls off and is out of the round.
+- A flick never goes exactly where you aimed: it turns by a random angle of up to 3° either way
+  for the softest shot, growing to 10° for a full-strength one.
 - If your shot knocks off at least one enemy checker and none of your own, you shoot again.
   Otherwise the turn passes to your opponent.
 - The round ends when only one colour is left on the board. The winner starts the next round,
@@ -32,8 +35,9 @@ slide flat, and regional variants like "scissors" or stacking a second checker.
 
 ## How to play
 
-- Press one of your checkers, pull back like a slingshot and let go. The arrow shows where the
-  checker will go; the further you pull, the longer and redder it gets and the harder the shot.
+- Press one of your checkers, pull back like a slingshot and let go. The sector in front of the
+  checker shows every direction the shot may take; the further you pull, the harder the shot
+  and the longer, wider and redder the sector.
   Let go close to the checker, or press Escape, to cancel.
 - Drag anywhere else to orbit the camera, scroll or pinch to zoom. After each turn the camera
   swings round to the side that shoots next, so two players can share one screen.
@@ -79,9 +83,11 @@ Code style is enforced with [ESLint](https://eslint.org/) for code quality and
 ### Adding a computer player
 
 A player is any object with `chooseShot(state)` returning a promise of
-`{ pieceId, vx, vz }` (a velocity in squares per second) and an optional `cancel()`. A bot can
-call `simulateShot(state.pieces, shot)` from `src/game/physics.js` to try out candidate shots
-and pick the one that knocks off the most enemy checkers. Plug it in by putting it in the
+`{ pieceId, vx, vz }` (the velocity it aims for, in squares per second) and an optional
+`cancel()`. The random deviation is added afterwards by `playShot`, so it applies to bots too.
+A bot can call `simulateShot(state.pieces, shot)` from `src/game/physics.js` to try out
+candidate shots (and, with `scatterShot` from `src/game/rules.js`, how they fare when they go a
+little off) and pick the one that knocks off the most enemy checkers. Plug it in by putting it in the
 `players` map in `src/main.js`.
 
 ## Deploying to GitHub Pages

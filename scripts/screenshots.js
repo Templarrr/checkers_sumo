@@ -22,24 +22,30 @@ async function open(options) {
 async function setUpAiming(page) {
   await page.evaluate(() => window.checkersSumo.shoot({ pieceId: 2, vx: 0.6, vz: -3.2 }));
   await page.waitForFunction(() => window.checkersSumo.getState().turn === 'dark');
-  await page.waitForTimeout(1500);
+  // Software rendering is slow; give the camera ample time to finish swinging to Dark's side.
+  await page.waitForTimeout(3500);
 }
 
-async function dragFrom(page, from, to) {
-  await page.mouse.move(...from);
+// Presses a Dark piece and pulls it back towards the viewer by `pull` pixels, slightly to the side.
+async function aimWith(page, pull) {
+  const id = await page.evaluate(
+    () => window.checkersSumo.getState().pieces.find((p) => p.color === 'dark' && p.x === 1.5).id,
+  );
+  const { x, y } = await page.evaluate((id) => window.checkersSumo.screenOf(id), id);
+  await page.mouse.move(x, y);
   await page.mouse.down();
-  await page.mouse.move(...to, { steps: 12 });
+  await page.mouse.move(x + pull * 0.35, y + pull, { steps: 12 });
   await page.waitForTimeout(200);
 }
 
 const desktop = await open({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 2 });
 await setUpAiming(desktop);
-await dragFrom(desktop, [512, 600], [560, 730]);
+await aimWith(desktop, 120);
 await desktop.screenshot({ path: `${OUT}/desktop.png` });
 
 const phone = await open({ ...devices['iPhone 13'], hasTouch: false, isMobile: false });
 await setUpAiming(phone);
-await dragFrom(phone, [137, 450], [150, 540]);
+await aimWith(phone, 80);
 await phone.screenshot({ path: `${OUT}/mobile.png` });
 
 await browser.close();

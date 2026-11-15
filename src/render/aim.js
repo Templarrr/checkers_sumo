@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { pieceNear } from '../game/rules.js';
+import { pieceNear, spreadDegrees } from '../game/rules.js';
 import { MAX_SPEED } from '../game/physics.js';
 import { PALETTE } from './palette.js';
 import { PIECE_HEIGHT } from './piecesView.js';
@@ -8,37 +8,28 @@ import { PIECE_HEIGHT } from './piecesView.js';
 const FULL_PULL = 2.5;
 // Releasing within this distance of the piece cancels instead of shooting a dribble.
 const DEAD_ZONE = 0.2;
-const MAX_ARROW = 3;
+const MIN_REACH = 0.8;
+const MAX_REACH = 3.2;
 
-function buildArrow() {
-  const shape = new THREE.Shape();
-  const w = 0.09;
-  const head = 0.28;
-  // Unit-length arrow along +y in shape space, scaled to the shot strength later.
-  shape.moveTo(-w, 0);
-  shape.lineTo(w, 0);
-  shape.lineTo(w, 1 - head);
-  shape.lineTo(w * 3, 1 - head);
-  shape.lineTo(0, 1);
-  shape.lineTo(-w * 3, 1 - head);
-  shape.lineTo(-w, 1 - head);
-  shape.closePath();
-  const geometry = new THREE.ShapeGeometry(shape);
-  // Laid flat, the shape's +y ends up along -z; turn it so the arrow points along +z.
-  geometry.rotateX(-Math.PI / 2);
-  geometry.rotateY(Math.PI);
+// The sector covers every direction the flick may actually take, see scatterShot.
+function buildSector() {
   const material = new THREE.MeshBasicMaterial({
     color: PALETTE.aimWeak,
     transparent: true,
-    opacity: 0.85,
-    depthTest: false,
+    opacity: 0.45,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    polygonOffset: true,
+    polygonOffsetFactor: -2,
   });
-  const mesh = new THREE.Mesh(geometry, material);
-  mesh.renderOrder = 10;
-  const arrow = new THREE.Group();
-  arrow.add(mesh);
-  arrow.visible = false;
-  return { arrow, mesh, material };
+  const fill = new THREE.Mesh(new THREE.BufferGeometry(), material);
+  const lineMaterial = new THREE.MeshBasicMaterial({ color: PALETTE.aimWeak, depthWrite: false });
+  const line = new THREE.Mesh(new THREE.PlaneGeometry(1, 0.035), lineMaterial);
+  line.rotation.x = -Math.PI / 2;
+  const sector = new THREE.Group();
+  sector.add(fill, line);
+  sector.visible = false;
+  return { sector, fill, line, material, lineMaterial };
 }
 
 /**
@@ -51,9 +42,9 @@ export function createAim({ container, canvas, camera, scene, piecesView }) {
   const pointer = new THREE.Vector2();
   const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -PIECE_HEIGHT / 2);
   const hit = new THREE.Vector3();
-  const { arrow, mesh, material } = buildArrow();
-  arrow.position.y = PIECE_HEIGHT + 0.02;
-  scene.add(arrow);
+  const { sector, fill, line, material, lineMaterial } = buildSector();
+  sector.position.y = 0.004;
+  scene.add(sector);
   const weak = new THREE.Color(PALETTE.aimWeak);
   const strong = new THREE.Color(PALETTE.aimStrong);
 
@@ -85,19 +76,26 @@ export function createAim({ container, canvas, camera, scene, piecesView }) {
     };
   }
 
-  function showArrow(shot) {
-    arrow.visible = Boolean(shot);
+  function showSector(shot) {
+    sector.visible = Boolean(shot);
     if (!shot) return;
-    arrow.position.x = drag.piece.x;
-    arrow.position.z = drag.piece.z;
-    arrow.rotation.y = Math.atan2(shot.vx, shot.vz);
-    mesh.scale.set(1, 1, 0.5 + shot.power * (MAX_ARROW - 0.5));
+    const reach = MIN_REACH + shot.power * (MAX_REACH - MIN_REACH);
+    const spread = (spreadDegrees(shot.power) * Math.PI) / 180;
+    fill.geometry.dispose();
+    fill.geometry = new THREE.CircleGeometry(reach, 24, -spread, spread * 2).rotateX(-Math.PI / 2);
+    line.scale.x = reach;
+    line.position.x = reach / 2;
+    sector.position.x = drag.piece.x;
+    sector.position.z = drag.piece.z;
+    // Built pointing along +x; turn it towards the shot.
+    sector.rotation.y = -Math.atan2(shot.vz, shot.vx);
     material.color.copy(weak).lerp(strong, shot.power);
+    lineMaterial.color.copy(material.color);
   }
 
   function endDrag() {
     drag = null;
-    arrow.visible = false;
+    sector.visible = false;
     piecesView.setAiming(null);
   }
 
@@ -120,7 +118,7 @@ export function createAim({ container, canvas, camera, scene, piecesView }) {
   window.addEventListener('pointermove', (event) => {
     if (drag && event.pointerId === drag.pointerId) {
       const point = boardPoint(event);
-      if (point) showArrow(shotFor(point));
+      if (point) showSector(shotFor(point));
       return;
     }
     if (!armed || drag) return;
