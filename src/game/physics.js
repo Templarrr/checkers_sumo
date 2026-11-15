@@ -1,4 +1,4 @@
-import { HALF, PIECE_RADIUS } from './constants.js';
+import { PIECE_RADIUS, PLAY_HALF } from './constants.js';
 
 export const MAX_SPEED = 11;
 // Sliding friction as a constant deceleration, in squares per second squared.
@@ -10,7 +10,7 @@ const STEPS_PER_FRAME = 4;
 export const FRAME_SECONDS = STEP * STEPS_PER_FRAME;
 const MAX_SECONDS = 30;
 
-export const isOffBoard = (x, z) => Math.abs(x) > HALF || Math.abs(z) > HALF;
+export const isOffBoard = (x, z) => Math.abs(x) > PLAY_HALF || Math.abs(z) > PLAY_HALF;
 
 /**
  * Plays out one flick to the end. Pure and deterministic, so a computer player can call it to

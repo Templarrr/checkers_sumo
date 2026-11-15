@@ -30,6 +30,13 @@ describe('simulateShot', () => {
     expect(falls.map((f) => f.id)).toContain(1);
   });
 
+  it('keeps a piece that stops on the frame beyond the cells in play', () => {
+    const { pieces, falls } = simulateShot([piece(0, 0, 3.5)], { pieceId: 0, vx: 0, vz: 2.2 });
+    expect(pieces[0].z).toBeGreaterThan(4);
+    expect(pieces[0].onBoard).toBe(true);
+    expect(falls).toEqual([]);
+  });
+
   it('leaves pieces that were not touched where they were', () => {
     const start = [piece(0, -3, 0), piece(1, 3, 0, DARK)];
     const { pieces } = simulateShot(start, { pieceId: 0, vx: 0, vz: 2 });
