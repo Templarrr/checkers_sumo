@@ -5,18 +5,21 @@ import { scatterShot } from '../game/rules.js';
 export const EASY = 'easy';
 export const MEDIUM = 'medium';
 
-// Flicks are continuous; bots only try a grid of them so the search is finite.
-const ANGLE_STEPS = 360;
-const POWER_STEPS = 10;
+// Flicks are continuous; bots only try a grid of them so the search is finite. A coarser grid
+// misses more good shots, which makes a weaker bot.
+const FINE = { angleSteps: 360, powerSteps: 10 };
+const COARSE = { angleSteps: 72, powerSteps: 4 };
 const MEDIUM_SAMPLES = 10;
 // Ties between equally good shots are broken at random, so the bot does not always repeat itself.
 const TIE = 1e-6;
 
-const LEVELS = {
-  // Aims only straight at enemy pieces and trusts the shot to go exactly there.
-  [EASY]: { enemyTargetsOnly: true, samples: 0 },
-  // Considers any shot that touches a piece and averages several imagined scattered outcomes.
-  [MEDIUM]: { enemyTargetsOnly: false, samples: MEDIUM_SAMPLES },
+export const LEVELS = {
+  // Tries 5° and 25% power steps, aims only straight at enemy pieces and trusts the shot to go
+  // exactly there.
+  [EASY]: { ...COARSE, enemyTargetsOnly: true, samples: 0 },
+  // Tries 1° and 10% power steps, considers any shot that touches a piece and averages several
+  // imagined scattered outcomes.
+  [MEDIUM]: { ...FINE, enemyTargetsOnly: false, samples: MEDIUM_SAMPLES },
 };
 
 // The piece a shot along (dx, dz) would touch first if it went straight, and how far it slides
@@ -43,19 +46,19 @@ function firstContact(shooter, pieces, dx, dz) {
 }
 
 /** Every grid shot for the side to move that would go straight into a piece. */
-export function candidateShots(state, { enemyTargetsOnly }) {
+export function candidateShots(state, { enemyTargetsOnly, angleSteps, powerSteps }) {
   const enemy = opponent(state.turn);
   const shots = [];
   for (const shooter of state.pieces) {
     if (!shooter.onBoard || shooter.color !== state.turn) continue;
-    for (let a = 0; a < ANGLE_STEPS; a++) {
-      const angle = (a / ANGLE_STEPS) * 2 * Math.PI;
+    for (let a = 0; a < angleSteps; a++) {
+      const angle = (a / angleSteps) * 2 * Math.PI;
       const dx = Math.cos(angle);
       const dz = Math.sin(angle);
       const contact = firstContact(shooter, state.pieces, dx, dz);
       if (!contact || (enemyTargetsOnly && contact.target.color !== enemy)) continue;
-      for (let step = 1; step <= POWER_STEPS; step++) {
-        const speed = (step / POWER_STEPS) * MAX_SPEED;
+      for (let step = 1; step <= powerSteps; step++) {
+        const speed = (step / powerSteps) * MAX_SPEED;
         // Distance slid before friction stops it.
         if ((speed * speed) / (2 * FRICTION) <= contact.distance) continue;
         shots.push({ pieceId: shooter.id, vx: dx * speed, vz: dz * speed });
@@ -99,9 +102,14 @@ export function evaluateShot(state, shot, level, random = Math.random) {
 }
 
 export function shotsFor(state, level) {
-  const shots = candidateShots(state, LEVELS[level]);
-  // A blocked Easy bot (every enemy hidden behind its own pieces) falls back to any contact.
-  return shots.length ? shots : candidateShots(state, { enemyTargetsOnly: false });
+  const options = LEVELS[level];
+  // A bot with no shot of its own kind (every enemy hidden, or slipping between grid lines)
+  // falls back to any contact, on the fine grid as a last resort.
+  for (const fallback of [{}, { enemyTargetsOnly: false }, { ...FINE, enemyTargetsOnly: false }]) {
+    const shots = candidateShots(state, { ...options, ...fallback });
+    if (shots.length) return shots;
+  }
+  return [];
 }
 
 /**

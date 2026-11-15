@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DARK, LIGHT } from '../src/game/constants.js';
 import { newMatch, playShot, shotError } from '../src/game/rules.js';
-import { EASY, MEDIUM, bestShot, candidateShots } from '../src/players/bot.js';
+import { EASY, LEVELS, MEDIUM, bestShot, candidateShots } from '../src/players/bot.js';
 
 const piece = (id, color, x, z) => ({ id, color, x, z, onBoard: true });
 const position = (pieces) => ({ ...newMatch(), pieces });
@@ -38,15 +38,22 @@ describe('bots', () => {
   it('only lets Medium aim at its own piece to push an enemy behind it', () => {
     // Light 0 stands behind Light 1, which stands behind Dark 2.
     const state = position([piece(0, LIGHT, 0, 2), piece(1, LIGHT, 0, 1), piece(2, DARK, 0, -1)]);
-    const easy = shotsFrom(candidateShots(state, { enemyTargetsOnly: true }), 0);
-    const medium = shotsFrom(candidateShots(state, { enemyTargetsOnly: false }), 0);
+    const easy = shotsFrom(candidateShots(state, { ...LEVELS[MEDIUM], enemyTargetsOnly: true }), 0);
+    const medium = shotsFrom(candidateShots(state, LEVELS[MEDIUM]), 0);
     expect(easy.some(straightAhead)).toBe(false);
     expect(medium.some(straightAhead)).toBe(true);
   });
 
+  it('gives Easy a coarser grid of shots than Medium', () => {
+    const state = newMatch();
+    const easy = candidateShots(state, { ...LEVELS[EASY], enemyTargetsOnly: false });
+    const medium = candidateShots(state, LEVELS[MEDIUM]);
+    expect(easy.length * 10).toBeLessThan(medium.length);
+  });
+
   it('ignores shots too weak to reach anything', () => {
     const state = position([piece(0, LIGHT, 0, 3.5), piece(1, DARK, 0, -3.5)]);
-    const shots = candidateShots(state, { enemyTargetsOnly: false });
+    const shots = candidateShots(state, LEVELS[MEDIUM]);
     expect(shots.length).toBeGreaterThan(0);
     // Reaching a piece 6.2 squares away needs a little over half power.
     expect(shots.every((s) => Math.hypot(s.vx, s.vz) > 5.5)).toBe(true);

@@ -93,15 +93,15 @@ A player is any object with `chooseShot(state)` returning a promise of
 `cancel()`. The random deviation is added afterwards by `playShot`, so it applies to bots too.
 Players are wired up in the `PLAYERS` map in `src/main.js`.
 
-Both bots (`src/players/bot.js`) try every shot on a grid of 1° directions and 10% power steps,
+Both bots (`src/players/bot.js`) try every shot on a grid of directions and power steps,
 keep only the ones that would run straight into a piece and are strong enough to reach it,
 play each one out with `simulateShot` and pick the best score: enemy checkers knocked off minus
 their own lost, with a tiny bonus for enemy checkers left near the edge to break ties.
 
-- **Easy** only aims straight at enemy checkers and assumes every shot goes exactly where it
-  aims (its real shots still scatter).
-- **Medium** also aims at its own checkers to push enemies behind them, and scores each shot
-  by the average of 10 imagined shots, each scattered like a real one.
+- **Easy** tries 5° and 25% power steps, only aims straight at enemy checkers and assumes every
+  shot goes exactly where it aims (its real shots still scatter).
+- **Medium** tries 1° and 10% power steps, also aims at its own checkers to push enemies behind
+  them, and scores each shot by the average of 10 imagined shots, each scattered like a real one.
 
 Medium tries well over 100,000 shots on a full board, so the search runs in Web Workers
 (`src/players/botPlayer.js`), split across the CPU's cores, and the page keeps animating while a
