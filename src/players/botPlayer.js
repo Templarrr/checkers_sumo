@@ -1,4 +1,4 @@
-import { bestShot, pickBest } from './bot.js';
+import { bestShot, fumbleAim, pickBest } from './bot.js';
 
 // The search runs in workers so the page keeps animating while a bot thinks, split across
 // cores because Medium imagines over a hundred thousand shots on a full board.
@@ -57,11 +57,12 @@ export function createBotPlayer(level, { aim } = {}) {
       const current = ++thinking;
       const [best] = await Promise.all([pool.search(state, level), wait(MIN_THINK_MS)]);
       if (current !== thinking) return new Promise(() => {});
-      aim?.preview(state, best.shot);
+      const shot = fumbleAim(best.shot, level);
+      aim?.preview(state, shot);
       await wait(PREVIEW_MS);
       if (current !== thinking) return new Promise(() => {});
       aim?.preview(state, null);
-      return best.shot;
+      return shot;
     },
     cancel() {
       thinking++;

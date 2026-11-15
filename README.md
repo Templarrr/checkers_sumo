@@ -99,7 +99,8 @@ play each one out with `simulateShot` and pick the best score: enemy checkers kn
 their own lost, with a tiny bonus for enemy checkers left near the edge to break ties.
 
 - **Easy** tries 5° and 25% power steps, only aims straight at enemy checkers and assumes every
-  shot goes exactly where it aims (its real shots still scatter).
+  shot goes exactly where it aims. Its chosen aim is then turned by a random angle of up to 5°
+  either way, before the usual scatter every shot gets.
 - **Medium** tries 1° and 10% power steps, also aims at its own checkers to push enemies behind
   them, and scores each shot by the average of 10 imagined shots, each scattered like a real one.
 

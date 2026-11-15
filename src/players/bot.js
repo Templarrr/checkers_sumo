@@ -15,11 +15,11 @@ const TIE = 1e-6;
 
 export const LEVELS = {
   // Tries 5° and 25% power steps, aims only straight at enemy pieces and trusts the shot to go
-  // exactly there.
-  [EASY]: { ...COARSE, enemyTargetsOnly: true, samples: 0 },
+  // exactly there, then fumbles its aim by up to 5° either way.
+  [EASY]: { ...COARSE, enemyTargetsOnly: true, samples: 0, aimErrorDegrees: 5 },
   // Tries 1° and 10% power steps, considers any shot that touches a piece and averages several
   // imagined scattered outcomes.
-  [MEDIUM]: { ...FINE, enemyTargetsOnly: false, samples: MEDIUM_SAMPLES },
+  [MEDIUM]: { ...FINE, enemyTargetsOnly: false, samples: MEDIUM_SAMPLES, aimErrorDegrees: 0 },
 };
 
 // The piece a shot along (dx, dz) would touch first if it went straight, and how far it slides
@@ -131,4 +131,17 @@ export function pickBest(scored, random = Math.random) {
   const top = Math.max(...valid.map((s) => s.score));
   const best = valid.filter((s) => s.score >= top - TIE);
   return best[Math.floor(random() * best.length)];
+}
+
+/**
+ * Turns the chosen shot by the level's own aiming error. It comes on top of the scatter every
+ * shot gets in playShot, and the bot does not account for it when choosing.
+ */
+export function fumbleAim(shot, level, random = Math.random) {
+  const error = (LEVELS[level].aimErrorDegrees * Math.PI) / 180;
+  if (!error) return shot;
+  const turn = (random() * 2 - 1) * error;
+  const cos = Math.cos(turn);
+  const sin = Math.sin(turn);
+  return { ...shot, vx: shot.vx * cos - shot.vz * sin, vz: shot.vx * sin + shot.vz * cos };
 }

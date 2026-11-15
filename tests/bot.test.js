@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DARK, LIGHT } from '../src/game/constants.js';
 import { newMatch, playShot, shotError } from '../src/game/rules.js';
-import { EASY, LEVELS, MEDIUM, bestShot, candidateShots } from '../src/players/bot.js';
+import { EASY, LEVELS, MEDIUM, bestShot, candidateShots, fumbleAim } from '../src/players/bot.js';
 
 const piece = (id, color, x, z) => ({ id, color, x, z, onBoard: true });
 const position = (pieces) => ({ ...newMatch(), pieces });
@@ -57,5 +57,16 @@ describe('bots', () => {
     expect(shots.length).toBeGreaterThan(0);
     // Reaching a piece 6.2 squares away needs a little over half power.
     expect(shots.every((s) => Math.hypot(s.vx, s.vz) > 5.5)).toBe(true);
+  });
+
+  it('turns Easy aim by at most 5 degrees and leaves Medium aim alone', () => {
+    const shot = { pieceId: 0, vx: 0, vz: -8 };
+    const angle = ({ vx, vz }) => (Math.atan2(vx, -vz) * 180) / Math.PI;
+    const extremes = [0, 1].map((r) => angle(fumbleAim(shot, EASY, () => r)));
+    expect(extremes.map(Math.abs)).toEqual([expect.closeTo(5), expect.closeTo(5)]);
+    expect(extremes[0]).toBeCloseTo(-extremes[1]);
+    const turned = fumbleAim(shot, EASY, () => 0.9);
+    expect(Math.hypot(turned.vx, turned.vz)).toBeCloseTo(8);
+    expect(fumbleAim(shot, MEDIUM, () => 1)).toEqual(shot);
   });
 });
