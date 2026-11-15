@@ -41,9 +41,11 @@ slide flat, and regional variants like "scissors" or stacking a second checker.
   Let go close to the checker, or press Escape, to cancel.
 - Drag anywhere else to orbit the camera, scroll or pinch to zoom. After each turn the camera
   swings round to the side that shoots next, so two players can share one screen.
-- Pick who plays Dark in the box at the bottom: a second player on the same screen, or the Easy
-  or Medium bot. You always play Light. Changing it starts a new game, and the choice is
-  remembered next time.
+- Pick who plays each side in the boxes at the bottom: a person, the Easy bot or the Medium
+  bot. Two people share one screen (hot seat), and two bots can play each other while you
+  watch. Changing either box starts a new game, and the choice is remembered next time. The
+  camera stays behind the side a person plays; with two people or two bots it follows whoever
+  shoots.
 - The line under the title shows the round and how many checkers each side has left on which
   row.
 
@@ -89,7 +91,7 @@ Code style is enforced with [ESLint](https://eslint.org/) for code quality and
 A player is any object with `chooseShot(state)` returning a promise of
 `{ pieceId, vx, vz }` (the velocity it aims for, in squares per second) and an optional
 `cancel()`. The random deviation is added afterwards by `playShot`, so it applies to bots too.
-Players are wired up in the `OPPONENTS` map in `src/main.js`.
+Players are wired up in the `PLAYERS` map in `src/main.js`.
 
 Both bots (`src/players/bot.js`) try every shot on a grid of 1° directions and 10% power steps,
 keep only the ones that would run straight into a piece and are strong enough to reach it,

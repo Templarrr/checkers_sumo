@@ -76,7 +76,8 @@ body {
 }
 
 #status[data-turn]::before,
-.rows .dot {
+.rows .dot,
+.player-pick .dot {
   content: '';
   display: inline-block;
   width: 0.75em;
@@ -88,12 +89,12 @@ body {
 }
 
 [data-turn='light']::before,
-.rows .dot.light {
+.dot.light {
   background: var(--light-piece);
 }
 
 [data-turn='dark']::before,
-.rows .dot.dark {
+.dot.dark {
   background: var(--dark-piece);
 }
 
@@ -134,7 +135,7 @@ body {
   gap: 0.5em;
 }
 
-.opponent {
+.player-pick {
   display: flex;
   align-items: center;
   gap: 0.4em;
@@ -145,7 +146,7 @@ body {
   font-size: 0.85em;
 }
 
-.opponent select {
+.player-pick select {
   font: inherit;
   color: var(--text);
   background: rgb(74 50 32 / 0.9);
