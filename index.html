@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta
+      name="description"
+      content="Flick your checkers to knock your opponent's off the board."
+    />
+    <title>Checkers Sumo</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <div class="hud">
+      <h1>Checkers Sumo</h1>
+      <span id="status"></span>
+    </div>
+    <div id="rows" class="rows"></div>
+    <div class="controls">
+      <p id="hint">Press one of your pieces, pull back and let go to flick it</p>
+      <div class="game-controls">
+        <button id="new-game" type="button" class="secondary">New game</button>
+        <button id="sound-toggle" type="button" class="secondary"></button>
+      </div>
+    </div>
+    <div id="round-over" class="round-over" hidden>
+      <div class="card" role="dialog" aria-labelledby="round-title">
+        <h2 id="round-title"></h2>
+        <p id="round-text"></p>
+        <button id="round-next" type="button"></button>
+      </div>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
