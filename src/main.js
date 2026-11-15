@@ -3,6 +3,8 @@ import './style.css';
 import { createSound } from './audio/sound.js';
 import { DARK, LIGHT } from './game/constants.js';
 import { DRAW, countPieces, newMatch, nextRound, playShot } from './game/rules.js';
+import { EASY, MEDIUM } from './players/bot.js';
+import { createBotPlayer } from './players/botPlayer.js';
 import { createHumanPlayer } from './players/human.js';
 import { createAim } from './render/aim.js';
 import { createBoardView } from './render/boardView.js';
@@ -23,8 +25,42 @@ onFrame((time) => piecesView.update(time));
 
 const aim = createAim({ container, canvas: renderer.domElement, camera, scene, piecesView });
 const human = createHumanPlayer(aim);
-// Hot seat: the same human player answers for both sides. A computer player slots in here.
+// Either side can be a person (hot seat on one screen) or a bot. A bot plays whichever side is
+// to move, so one instance can serve both sides of a bot-vs-bot game.
+const PLAYERS = {
+  human,
+  [EASY]: createBotPlayer(EASY, { aim }),
+  [MEDIUM]: createBotPlayer(MEDIUM, { aim }),
+};
 const players = { [LIGHT]: human, [DARK]: human };
+const pickers = { [LIGHT]: $('player-light'), [DARK]: $('player-dark') };
+const storageKey = (color) => `checkersSumo.player.${color}`;
+
+function setPlayer(color, choice) {
+  const kind = PLAYERS[choice] ? choice : 'human';
+  players[color] = PLAYERS[kind];
+  pickers[color].value = kind;
+  try {
+    localStorage.setItem(storageKey(color), kind);
+  } catch {
+    // Storage can be blocked, e.g. in private windows; the choice just isn't remembered.
+  }
+}
+
+function savedPlayer(color) {
+  try {
+    return localStorage.getItem(storageKey(color));
+  } catch {
+    return null;
+  }
+}
+
+// The camera sits behind the side a person plays; with people on both sides or none, it
+// follows whoever shoots.
+function cameraSide() {
+  const humans = [LIGHT, DARK].filter((color) => !players[color].isBot);
+  return humans.length === 1 ? humans[0] : state.turn;
+}
 
 const sound = createSound();
 const soundToggle = $('sound-toggle');
@@ -96,9 +132,12 @@ function showRoundOver() {
 async function play() {
   const current = ++game;
   while (!state.roundWinner) {
-    faceSide(state.turn);
-    showStatus(shotSummary(state.lastShot) ?? undefined);
-    const shot = await players[state.turn].chooseShot(state);
+    const player = players[state.turn];
+    faceSide(cameraSide());
+    $('hint').style.visibility = player.isBot ? 'hidden' : '';
+    const summary = shotSummary(state.lastShot);
+    showStatus(summary ?? (player.isBot ? `${NAMES[state.turn]} is thinking…` : undefined));
+    const shot = await player.chooseShot(state);
     if (current !== game) return;
     let result;
     try {
@@ -123,7 +162,7 @@ async function play() {
 
 function startRound(next) {
   game++;
-  human.cancel();
+  Object.values(PLAYERS).forEach((player) => player.cancel());
   state = next;
   $('round-over').hidden = true;
   piecesView.sync(state.pieces);
@@ -134,6 +173,13 @@ $('round-next').addEventListener('click', () => {
   startRound(state.matchWinner ? newMatch() : nextRound(state));
 });
 $('new-game').addEventListener('click', () => startRound(newMatch()));
+for (const color of [LIGHT, DARK]) {
+  pickers[color].addEventListener('change', () => {
+    setPlayer(color, pickers[color].value);
+    startRound(newMatch());
+  });
+  setPlayer(color, savedPlayer(color));
+}
 startRound(state);
 
 // Lets scripted browser checks play shots without simulating pointer drags.

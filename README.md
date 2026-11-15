@@ -41,6 +41,11 @@ slide flat, and regional variants like "scissors" or stacking a second checker.
   Let go close to the checker, or press Escape, to cancel.
 - Drag anywhere else to orbit the camera, scroll or pinch to zoom. After each turn the camera
   swings round to the side that shoots next, so two players can share one screen.
+- Pick who plays each side in the boxes at the bottom: a person, the Easy bot or the Medium
+  bot. Two people share one screen (hot seat), and two bots can play each other while you
+  watch. Changing either box starts a new game, and the choice is remembered next time. The
+  camera stays behind the side a person plays; with two people or two bots it follows whoever
+  shoots.
 - The line under the title shows the round and how many checkers each side has left on which
   row.
 
@@ -77,18 +82,31 @@ Code style is enforced with [ESLint](https://eslint.org/) for code quality and
   deterministically (sliding friction, checker collisions, falling off the edge); `rules.js`
   turns the result into Chapaev rules: whose turn it is, rounds, rows and the winner.
 - `src/render/`: three.js scene, board, checkers, shot replay and the slingshot aiming.
-- `src/players/`: who chooses the shots. Right now one human player serves both sides.
+- `src/players/`: who chooses the shots: the human (one instance serves both sides in hot seat)
+  and the bots.
 - `src/audio/`: collision and landing sounds, synthesised with Web Audio.
 
-### Adding a computer player
+### Computer players
 
 A player is any object with `chooseShot(state)` returning a promise of
 `{ pieceId, vx, vz }` (the velocity it aims for, in squares per second) and an optional
 `cancel()`. The random deviation is added afterwards by `playShot`, so it applies to bots too.
-A bot can call `simulateShot(state.pieces, shot)` from `src/game/physics.js` to try out
-candidate shots (and, with `scatterShot` from `src/game/rules.js`, how they fare when they go a
-little off) and pick the one that knocks off the most enemy checkers. Plug it in by putting it in the
-`players` map in `src/main.js`.
+Players are wired up in the `PLAYERS` map in `src/main.js`.
+
+Both bots (`src/players/bot.js`) try every shot on a grid of directions and power steps,
+keep only the ones that would run straight into a piece and are strong enough to reach it,
+play each one out with `simulateShot` and pick the best score: enemy checkers knocked off minus
+their own lost, with a tiny bonus for enemy checkers left near the edge to break ties.
+
+- **Easy** tries 5° and 25% power steps, only aims straight at enemy checkers and assumes every
+  shot goes exactly where it aims. Its chosen aim is then turned by a random angle of up to 5°
+  either way, before the usual scatter every shot gets.
+- **Medium** tries 1° and 10% power steps, also aims at its own checkers to push enemies behind
+  them, and scores each shot by the average of 10 imagined shots, each scattered like a real one.
+
+Medium tries well over 100,000 shots on a full board, so the search runs in Web Workers
+(`src/players/botPlayer.js`), split across the CPU's cores, and the page keeps animating while a
+bot thinks. A Hard bot would be another entry in `LEVELS` in `bot.js`.
 
 ## Deploying to GitHub Pages
 

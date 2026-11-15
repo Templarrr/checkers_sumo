@@ -43,3 +43,17 @@ describe('simulateShot', () => {
     expect(pieces[1]).toEqual(start[1]);
   });
 });
+
+describe('simulateShot without replay data', () => {
+  it('ends with the same pieces as the full simulation', () => {
+    const start = [piece(0, 0, 3), piece(1, 0.3, 1, DARK), piece(2, -1, -2, DARK), piece(3, 2, 0)];
+    const shot = { pieceId: 0, vx: 0.4, vz: -9 };
+    const full = simulateShot(start, shot).pieces;
+    const fast = simulateShot(start, shot, { record: false }).pieces;
+    fast.forEach((p, i) => {
+      expect(p.onBoard).toBe(full[i].onBoard);
+      expect(p.x).toBeCloseTo(full[i].x, 9);
+      expect(p.z).toBeCloseTo(full[i].z, 9);
+    });
+  });
+});

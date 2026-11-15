@@ -76,7 +76,7 @@ export function createAim({ container, canvas, camera, scene, piecesView }) {
     };
   }
 
-  function showSector(shot) {
+  function showSector(shot, piece = drag?.piece) {
     sector.visible = Boolean(shot);
     if (!shot) return;
     const reach = MIN_REACH + shot.power * (MAX_REACH - MIN_REACH);
@@ -85,8 +85,8 @@ export function createAim({ container, canvas, camera, scene, piecesView }) {
     fill.geometry = new THREE.CircleGeometry(reach, 24, -spread, spread * 2).rotateX(-Math.PI / 2);
     line.scale.x = reach;
     line.position.x = reach / 2;
-    sector.position.x = drag.piece.x;
-    sector.position.z = drag.piece.z;
+    sector.position.x = piece.x;
+    sector.position.z = piece.z;
     // Built pointing along +x; turn it towards the shot.
     sector.rotation.y = -Math.atan2(shot.vz, shot.vx);
     material.color.copy(weak).lerp(strong, shot.power);
@@ -155,6 +155,15 @@ export function createAim({ container, canvas, camera, scene, piecesView }) {
       armed = null;
       onShot(shot);
       return true;
+    },
+    /** Shows where a computer player is about to shoot, or hides it with `null`. */
+    preview(state, shot) {
+      const piece = shot && state.pieces.find((p) => p.id === shot.pieceId);
+      piecesView.setAiming(piece ? piece.id : null);
+      showSector(
+        piece && { ...shot, power: Math.min(Math.hypot(shot.vx, shot.vz) / MAX_SPEED, 1) },
+        piece,
+      );
     },
     disable() {
       armed = null;

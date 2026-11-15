@@ -76,7 +76,8 @@ body {
 }
 
 #status[data-turn]::before,
-.rows .dot {
+.rows .dot,
+.player-pick .dot {
   content: '';
   display: inline-block;
   width: 0.75em;
@@ -88,12 +89,12 @@ body {
 }
 
 [data-turn='light']::before,
-.rows .dot.light {
+.dot.light {
   background: var(--light-piece);
 }
 
 [data-turn='dark']::before,
-.rows .dot.dark {
+.dot.dark {
   background: var(--dark-piece);
 }
 
@@ -128,7 +129,31 @@ body {
 
 .game-controls {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
   gap: 0.5em;
+}
+
+.player-pick {
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  padding: 0.15em 0.3em 0.15em 0.9em;
+  border-radius: 999px;
+  background: var(--panel);
+  border: 1px solid rgb(241 220 180 / 0.35);
+  font-size: 0.85em;
+}
+
+.player-pick select {
+  font: inherit;
+  color: var(--text);
+  background: rgb(74 50 32 / 0.9);
+  border: none;
+  border-radius: 999px;
+  padding: 0.15em 0.6em;
+  cursor: pointer;
 }
 
 button {
