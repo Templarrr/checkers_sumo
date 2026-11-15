@@ -8,6 +8,8 @@ traditional Chapaev rules, rendered in 3D with [three.js](https://threejs.org/).
 
 ![Dark aims a flick: the arrow shows the direction and strength of the shot](docs/screenshots/desktop.png)
 
+<img src="docs/screenshots/mobile.png" alt="The same moment on a phone in portrait" width="300">
+
 ## Rules
 
 - Each side has 8 checkers. In the first round Light lines up on its back row and Dark on the
@@ -49,6 +51,16 @@ npm test         # unit tests (Vitest)
 npm run lint     # ESLint + Prettier check
 npm run format   # fix lint and formatting issues
 npm run check    # lint, test and build, the same steps CI runs
+```
+
+### Screenshots
+
+The images in `docs/screenshots/` are shown in this README and in pull requests. Whenever the
+look or the UI changes, regenerate them in the same change so they stay up to date:
+
+```sh
+npx playwright install chromium   # once, downloads the browser the script drives
+npm run screenshots               # builds the game and rewrites docs/screenshots/*.png
 ```
 
 Code style is enforced with [ESLint](https://eslint.org/) for code quality and
