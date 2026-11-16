@@ -1,7 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { DARK, LIGHT } from '../src/game/constants.js';
 import { newMatch, playShot, shotError } from '../src/game/rules.js';
-import { EASY, LEVELS, MEDIUM, bestShot, candidateShots, fumbleAim } from '../src/players/bot.js';
+import {
+  EASY,
+  HARD,
+  LEVELS,
+  MEDIUM,
+  bestShot,
+  candidateShots,
+  evaluateShot,
+  fumbleAim,
+} from '../src/players/bot.js';
 
 const piece = (id, color, x, z) => ({ id, color, x, z, onBoard: true });
 const position = (pieces) => ({ ...newMatch(), pieces });
@@ -18,15 +27,17 @@ const shotsFrom = (shots, id) => shots.filter((s) => s.pieceId === id);
 const straightAhead = (shot) => Math.abs(shot.vx) < 1e-9 && shot.vz < 0;
 
 // A Dark piece close to the far edge, straight in front of a Light piece.
-const sitter = () =>
-  position([piece(0, LIGHT, 0, 1), piece(1, DARK, 0, -3.5), piece(2, DARK, -3.5, 3.5)]);
+const sitter = (lightZ = 1) =>
+  position([piece(0, LIGHT, 0, lightZ), piece(1, DARK, 0, -3.5), piece(2, DARK, -3.5, 3.5)]);
 
 describe('bots', () => {
-  for (const level of [EASY, MEDIUM]) {
+  for (const level of [EASY, MEDIUM, HARD]) {
     it(`${level} knocks off a piece that is easy to hit`, () => {
-      const { shot, score } = bestShot(sitter(), level, { random: seeded() });
+      // Close enough that even the edges of the spread hit it.
+      const close = sitter(-2.2);
+      const { shot, score } = bestShot(close, level, { random: seeded() });
       expect(score).toBeGreaterThan(0.5);
-      const { state } = playShot(sitter(), shot, exact);
+      const { state } = playShot(close, shot, exact);
       expect(state.lastShot.knockedOff).toBe(1);
     });
   }
@@ -65,6 +76,19 @@ describe('bots', () => {
     expect(shots.length).toBeGreaterThan(0);
     // Reaching a piece 6.2 squares away needs a little over half power.
     expect(shots.every((s) => Math.hypot(s.vx, s.vz) > 5.5)).toBe(true);
+  });
+
+  it('makes Hard judge a shot by its worst scatter, not its lucky ones', () => {
+    // At full power and 4.5 squares the spread is wide enough to miss at its edges.
+    const longShot = { pieceId: 0, vx: 0, vz: -11 };
+    const { state } = playShot(sitter(), longShot, exact);
+    expect(state.lastShot.knockedOff).toBe(1);
+    expect(evaluateShot(sitter(), longShot, HARD)).toBeLessThan(0.5);
+  });
+
+  it('gives Hard the same shots to choose from as Medium', () => {
+    const state = newMatch();
+    expect(candidateShots(state, LEVELS[HARD])).toEqual(candidateShots(state, LEVELS[MEDIUM]));
   });
 
   it('turns Easy aim by at most 5 degrees and leaves Medium aim alone', () => {
