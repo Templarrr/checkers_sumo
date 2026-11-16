@@ -6,6 +6,14 @@ import { EASY, LEVELS, MEDIUM, bestShot, candidateShots, fumbleAim } from '../sr
 const piece = (id, color, x, z) => ({ id, color, x, z, onBoard: true });
 const position = (pieces) => ({ ...newMatch(), pieces });
 const exact = { random: () => 0.5 };
+// Medium imagines randomly scattered shots; a fixed sequence keeps its choice repeatable.
+function seeded(seed = 1) {
+  let a = seed;
+  return () => {
+    a = (a * 1664525 + 1013904223) % 4294967296;
+    return a / 4294967296;
+  };
+}
 const shotsFrom = (shots, id) => shots.filter((s) => s.pieceId === id);
 const straightAhead = (shot) => Math.abs(shot.vx) < 1e-9 && shot.vz < 0;
 
@@ -16,7 +24,7 @@ const sitter = () =>
 describe('bots', () => {
   for (const level of [EASY, MEDIUM]) {
     it(`${level} knocks off a piece that is easy to hit`, () => {
-      const { shot, score } = bestShot(sitter(), level);
+      const { shot, score } = bestShot(sitter(), level, { random: seeded() });
       expect(score).toBeGreaterThan(0.5);
       const { state } = playShot(sitter(), shot, exact);
       expect(state.lastShot.knockedOff).toBe(1);
