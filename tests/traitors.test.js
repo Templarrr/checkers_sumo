@@ -152,6 +152,16 @@ describe('playShot with the traitor check', () => {
     expect(state.turn).toBe(LIGHT);
   });
 
+  it('gives another shot when the check turns an enemy checker traitor', () => {
+    const start = {
+      ...newMatch(),
+      pieces: [piece(0, LIGHT, 0, -2.5), piece(8, DARK, 0, -3.6), piece(9, DARK, 3, 0)],
+    };
+    const { state } = playShot(start, shot, { random: sequence(0.5, ODD, STRAIGHT_IN, 0.5) });
+    expect(state.lastShot).toMatchObject({ knockedOff: 0, enemyTurned: 1, extraShot: true });
+    expect(state.turn).toBe(LIGHT);
+  });
+
   it('ends the round when the check turns the last checker of a side', () => {
     // Dark's only checker is nudged over the edge and comes down as a Light traitor.
     const start = { ...newMatch(), pieces: [piece(0, LIGHT, 0, -2.5), piece(8, DARK, 0, -3.6)] };
