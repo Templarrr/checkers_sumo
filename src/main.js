@@ -3,7 +3,7 @@ import './style.css';
 import { createSound } from './audio/sound.js';
 import { DARK, LIGHT } from './game/constants.js';
 import { DRAW, countPieces, newMatch, nextRound, playShot } from './game/rules.js';
-import { EASY, MEDIUM } from './players/bot.js';
+import { EASY, HARD, MEDIUM } from './players/bot.js';
 import { createBotPlayer } from './players/botPlayer.js';
 import { createHumanPlayer } from './players/human.js';
 import { createAim } from './render/aim.js';
@@ -31,6 +31,7 @@ const PLAYERS = {
   human,
   [EASY]: createBotPlayer(EASY, { aim }),
   [MEDIUM]: createBotPlayer(MEDIUM, { aim }),
+  [HARD]: createBotPlayer(HARD, { aim }),
 };
 const players = { [LIGHT]: human, [DARK]: human };
 const pickers = { [LIGHT]: $('player-light'), [DARK]: $('player-dark') };

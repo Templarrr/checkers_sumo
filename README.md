@@ -42,7 +42,7 @@ slide flat, and regional variants like "scissors" or stacking a second checker.
   Let go close to the checker, or press Escape, to cancel.
 - Drag anywhere else to orbit the camera, scroll or pinch to zoom. After each turn the camera
   swings round to the side that shoots next, so two players can share one screen.
-- Pick who plays each side in the boxes at the bottom: a person, the Easy bot or the Medium
+- Pick who plays each side in the boxes at the bottom: a person, or the Easy, Medium or Hard
   bot. Two people share one screen (hot seat), and two bots can play each other while you
   watch. Changing either box starts a new game, and the choice is remembered next time. The
   camera stays behind the side a person plays; with two people or two bots it follows whoever
@@ -104,10 +104,13 @@ their own lost, with a tiny bonus for enemy checkers left near the edge to break
   either way, before the usual scatter every shot gets.
 - **Medium** tries 1° and 10% power steps, also aims at its own checkers to push enemies behind
   them, and scores each shot by the average of 10 imagined shots, each scattered like a real one.
+- **Hard** tries the same shots as Medium, but imagines each one 9 times at evenly spaced angles
+  across its whole spread, both edges and the middle included, and scores it by the worst of
+  them. It passes on shots that only work with luck.
 
-Medium tries well over 100,000 shots on a full board, so the search runs in Web Workers
+Medium and Hard try well over 100,000 shots on a full board, so the search runs in Web Workers
 (`src/players/botPlayer.js`), split across the CPU's cores, and the page keeps animating while a
-bot thinks. A Hard bot would be another entry in `LEVELS` in `bot.js`.
+bot thinks.
 
 To compare bots, `npm run tournament -- 50 medium easy` plays 50 games between them without
 rendering, alternating who shoots first, and prints the wins for each. It uses every CPU core

@@ -4,12 +4,15 @@ import { scatterShot } from '../game/rules.js';
 
 export const EASY = 'easy';
 export const MEDIUM = 'medium';
+export const HARD = 'hard';
 
 // Flicks are continuous; bots only try a grid of them so the search is finite. A coarser grid
 // misses more good shots, which makes a weaker bot.
 const FINE = { angleSteps: 360, powerSteps: 10 };
 const COARSE = { angleSteps: 72, powerSteps: 4 };
 const MEDIUM_SAMPLES = 10;
+// Odd, so the straight shot is one of them; about Medium's cost.
+const HARD_SAMPLES = 9;
 // Ties between equally good shots are broken at random, so the bot does not always repeat itself.
 const TIE = 1e-6;
 
@@ -20,6 +23,15 @@ export const LEVELS = {
   // Tries 1° and 10% power steps, considers any shot that touches a piece and averages several
   // imagined scattered outcomes.
   [MEDIUM]: { ...FINE, enemyTargetsOnly: false, samples: MEDIUM_SAMPLES, aimErrorDegrees: 0 },
+  // Same shots as Medium, but imagines them evenly across the whole spread, edges included, and
+  // judges each by its worst outcome, so it avoids shots that only pay off with luck.
+  [HARD]: {
+    ...FINE,
+    enemyTargetsOnly: false,
+    samples: HARD_SAMPLES,
+    worstCase: true,
+    aimErrorDegrees: 0,
+  },
 };
 
 // The piece a shot along (dx, dz) would touch first if it went straight, and how far it slides
@@ -88,7 +100,7 @@ export function scoreOutcome(before, after, side) {
 }
 
 export function evaluateShot(state, shot, level, random = Math.random) {
-  const { samples } = LEVELS[level];
+  const { samples, worstCase } = LEVELS[level];
   const outcome = (played) =>
     scoreOutcome(
       state.pieces,
@@ -96,6 +108,15 @@ export function evaluateShot(state, shot, level, random = Math.random) {
       state.turn,
     );
   if (!samples) return outcome(shot);
+  if (worstCase) {
+    let worst = Infinity;
+    for (let i = 0; i < samples; i++) {
+      // scatterShot maps 0 and 1 to the two edges of the spread.
+      const edgeToEdge = i / (samples - 1);
+      worst = Math.min(worst, outcome(scatterShot(shot, () => edgeToEdge)));
+    }
+    return worst;
+  }
   let total = 0;
   for (let i = 0; i < samples; i++) total += outcome(scatterShot(shot, random));
   return total / samples;
