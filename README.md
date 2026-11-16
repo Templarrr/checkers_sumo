@@ -108,6 +108,10 @@ their own lost, with a tiny bonus for enemy checkers left near the edge to break
   across its whole spread, both edges and the middle included, and scores it by the worst of
   them. It passes on shots that only work with luck.
 
+Once the opponent has a single checker left, Medium and Hard only consider shots straight at
+it. Nudging their own checkers about and waiting for the opponent to miss would win more often,
+but it drags every round out.
+
 Medium and Hard try well over 100,000 shots on a full board, so the search runs in Web Workers
 (`src/players/botPlayer.js`), split across the CPU's cores, and the page keeps animating while a
 bot thinks.

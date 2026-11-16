@@ -22,7 +22,13 @@ export const LEVELS = {
   [EASY]: { ...COARSE, enemyTargetsOnly: true, samples: 0, aimErrorDegrees: 5 },
   // Tries 1° and 10% power steps, considers any shot that touches a piece and averages several
   // imagined scattered outcomes.
-  [MEDIUM]: { ...FINE, enemyTargetsOnly: false, samples: MEDIUM_SAMPLES, aimErrorDegrees: 0 },
+  [MEDIUM]: {
+    ...FINE,
+    enemyTargetsOnly: false,
+    samples: MEDIUM_SAMPLES,
+    aimErrorDegrees: 0,
+    attackLastPiece: true,
+  },
   // Same shots as Medium, but imagines them evenly across the whole spread, edges included, and
   // judges each by its worst outcome, so it avoids shots that only pay off with luck.
   [HARD]: {
@@ -31,6 +37,7 @@ export const LEVELS = {
     samples: HARD_SAMPLES,
     worstCase: true,
     aimErrorDegrees: 0,
+    attackLastPiece: true,
   },
 };
 
@@ -123,7 +130,11 @@ export function evaluateShot(state, shot, level, random = Math.random) {
 }
 
 export function shotsFor(state, level) {
-  const options = LEVELS[level];
+  const options = { ...LEVELS[level] };
+  // Against a lone enemy piece, nudging own pieces about and waiting for the opponent to miss
+  // wins, but drags every round out. Only shots straight at it are allowed.
+  const enemies = state.pieces.filter((p) => p.onBoard && p.color === opponent(state.turn));
+  if (options.attackLastPiece && enemies.length === 1) options.enemyTargetsOnly = true;
   // A bot with no shot of its own kind (every enemy hidden, or slipping between grid lines)
   // falls back to any contact, on the fine grid as a last resort.
   for (const fallback of [{}, { enemyTargetsOnly: false }, { ...FINE, enemyTargetsOnly: false }]) {
