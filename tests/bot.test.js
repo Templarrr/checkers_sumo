@@ -10,6 +10,7 @@ import {
   candidateShots,
   evaluateShot,
   fumbleAim,
+  shotsFor,
 } from '../src/players/bot.js';
 
 const piece = (id, color, x, z) => ({ id, color, x, z, onBoard: true });
@@ -89,6 +90,26 @@ describe('bots', () => {
   it('gives Hard the same shots to choose from as Medium', () => {
     const state = newMatch();
     expect(candidateShots(state, LEVELS[HARD])).toEqual(candidateShots(state, LEVELS[MEDIUM]));
+  });
+
+  it('makes Medium and Hard shoot only at the last enemy piece', () => {
+    const lone = position([piece(0, LIGHT, 0, 2), piece(1, LIGHT, 1, 3), piece(2, DARK, 0, -2)]);
+    const twoLeft = position([...lone.pieces, piece(3, DARK, 3, -3)]);
+    // The shot's straight line passes close enough to Dark 2 to hit it.
+    const atLastPiece = (state) => (shot) => {
+      const from = state.pieces.find((p) => p.id === shot.pieceId);
+      const speed = Math.hypot(shot.vx, shot.vz);
+      const rx = 0 - from.x;
+      const rz = -2 - from.z;
+      const along = (rx * shot.vx + rz * shot.vz) / speed;
+      return along > 0 && Math.abs(rx * shot.vz - rz * shot.vx) / speed < 0.8;
+    };
+    for (const level of [MEDIUM, HARD]) {
+      expect(shotsFor(twoLeft, level).every(atLastPiece(twoLeft))).toBe(false);
+      const shots = shotsFor(lone, level);
+      expect(shots.length).toBeGreaterThan(0);
+      expect(shots.every(atLastPiece(lone))).toBe(true);
+    }
   });
 
   it('turns Easy aim by at most 5 degrees and leaves Medium aim alone', () => {
