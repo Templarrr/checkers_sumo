@@ -21,9 +21,16 @@ function buildSector() {
     side: THREE.DoubleSide,
     polygonOffset: true,
     polygonOffsetFactor: -2,
+    polygonOffsetUnits: -4,
   });
   const fill = new THREE.Mesh(new THREE.BufferGeometry(), material);
-  const lineMaterial = new THREE.MeshBasicMaterial({ color: PALETTE.aimWeak, depthWrite: false });
+  const lineMaterial = new THREE.MeshBasicMaterial({
+    color: PALETTE.aimWeak,
+    depthWrite: false,
+    polygonOffset: true,
+    polygonOffsetFactor: -2,
+    polygonOffsetUnits: -4,
+  });
   const line = new THREE.Mesh(new THREE.PlaneGeometry(1, 0.035), lineMaterial);
   line.rotation.x = -Math.PI / 2;
   const sector = new THREE.Group();

@@ -117,8 +117,9 @@ function showRoundOver() {
     const pushed = nextRows[loser] < state.rows[loser];
     title = `${NAMES[roundWinner]} wins round ${state.round}`;
     text =
-      `${NAMES[roundWinner]} moves up to row ${nextRows[roundWinner] + 1} and starts the next round.` +
-      (pushed ? ` ${NAMES[loser]} is pushed back to row ${nextRows[loser] + 1}.` : '');
+      `${NAMES[roundWinner]} moves up to row ${nextRows[roundWinner] + 1} .` +
+      (pushed ? ` ${NAMES[loser]} is pushed back to row ${nextRows[loser] + 1}.` : '') +
+      ` ${NAMES[loser]} starts the next round.`;
     button = 'Next round';
   }
   $('round-title').textContent = title;

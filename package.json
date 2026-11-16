@@ -16,7 +16,8 @@
     "format": "eslint . --fix && prettier --write .",
     "test": "vitest run",
     "check": "npm run lint && npm run test && npm run build",
-    "screenshots": "vite build && node scripts/screenshots.js"
+    "screenshots": "vite build && node scripts/screenshots.js",
+    "tournament": "node scripts/tournament.js"
   },
   "dependencies": {
     "three": "^0.186.1"
