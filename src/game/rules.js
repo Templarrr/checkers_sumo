@@ -110,19 +110,20 @@ export function playShot(state, shot, { random = Math.random } = {}) {
   let pieces = simulation.pieces.filter((p) => p.onBoard);
 
   const lost = (color) => countPieces(state.pieces, color) - countPieces(pieces, color);
-  const knockedOff = lost(opponent(shooter));
+  let knockedOff = lost(opponent(shooter));
   let ownLost = lost(shooter);
   let ownTurned = 0;
   let check = null;
   if (state.traitorCheck && pieces.some(overhangs)) {
     const result = traitorCheck(pieces, random);
     check = { before: pieces, after: result.pieces, tosses: result.tosses };
-    // Losing your own checkers in the check, or seeing them turn traitor, counts like losing
-    // them to your own shot.
+    // Whatever the check takes off the board counts as if the shot had knocked it off, and
+    // seeing your own checkers turn traitor counts like losing them.
     const after = new Map(check.after.map((p) => [p.id, p]));
     for (const p of pieces) {
-      if (sideOf(p) !== shooter) continue;
-      if (!after.has(p.id)) ownLost++;
+      if (sideOf(p) !== shooter) {
+        if (!after.has(p.id)) knockedOff++;
+      } else if (!after.has(p.id)) ownLost++;
       else if (sideOf(after.get(p.id)) !== shooter) ownTurned++;
     }
     pieces = check.after;

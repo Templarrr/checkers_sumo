@@ -140,6 +140,18 @@ describe('playShot with the traitor check', () => {
     expect(state.turn).toBe(DARK);
   });
 
+  it('gives another shot when the check throws an enemy checker out', () => {
+    // Dark 8 is nudged over the edge but stays on the board until the check tosses it off.
+    const start = {
+      ...newMatch(),
+      pieces: [piece(0, LIGHT, 0, -2.5), piece(8, DARK, 0, -3.6), piece(9, DARK, 3, 0)],
+    };
+    const { state } = playShot(start, shot, { random: sequence(0.5, EVEN, STRAIGHT_OUT, 0.9) });
+    expect(state.lastShot.check.tosses.map((t) => t.result)).toEqual(['off']);
+    expect(state.lastShot).toMatchObject({ knockedOff: 1, ownLost: 0, extraShot: true });
+    expect(state.turn).toBe(LIGHT);
+  });
+
   it('ends the round when the check turns the last checker of a side', () => {
     // Dark's only checker is nudged over the edge and comes down as a Light traitor.
     const start = { ...newMatch(), pieces: [piece(0, LIGHT, 0, -2.5), piece(8, DARK, 0, -3.6)] };
