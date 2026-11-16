@@ -120,7 +120,8 @@ function shotSummary(lastShot) {
   const turn = `${NAMES[state.turn]}'s turn`;
   let text = null;
   if (extraShot) text = `Hit! ${NAMES[shooter]} shoots again`;
-  else if ((knockedOff || enemyTurned) && (ownLost || ownTurned)) text = `Both sides lost pieces · ${turn}`;
+  else if ((knockedOff || enemyTurned) && (ownLost || ownTurned))
+    text = `Both sides lost pieces · ${turn}`;
   else if (ownLost || ownTurned) text = `Own piece lost · ${turn}`;
   if (check) return `${checkSummary(check)} · ${text ?? turn}`;
   return text;
