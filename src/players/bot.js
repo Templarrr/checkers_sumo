@@ -1,6 +1,7 @@
-import { PIECE_RADIUS, PLAY_HALF, opponent } from '../game/constants.js';
+import { PIECE_RADIUS, PLAY_HALF, opponent, sideOf } from '../game/constants.js';
 import { FRICTION, MAX_SPEED, simulateShot } from '../game/physics.js';
 import { scatterShot } from '../game/rules.js';
+import { MIN_OVERHANG, overhang, tossOdds } from '../game/traitors.js';
 
 export const EASY = 'easy';
 export const MEDIUM = 'medium';
@@ -69,13 +70,13 @@ export function candidateShots(state, { enemyTargetsOnly, angleSteps, powerSteps
   const enemy = opponent(state.turn);
   const shots = [];
   for (const shooter of state.pieces) {
-    if (!shooter.onBoard || shooter.color !== state.turn) continue;
+    if (!shooter.onBoard || sideOf(shooter) !== state.turn) continue;
     for (let a = 0; a < angleSteps; a++) {
       const angle = (a / angleSteps) * 2 * Math.PI;
       const dx = Math.cos(angle);
       const dz = Math.sin(angle);
       const contact = firstContact(shooter, state.pieces, dx, dz);
-      if (!contact || (enemyTargetsOnly && contact.target.color !== enemy)) continue;
+      if (!contact || (enemyTargetsOnly && sideOf(contact.target) !== enemy)) continue;
       for (let step = 1; step <= powerSteps; step++) {
         const speed = (step / powerSteps) * MAX_SPEED;
         // Distance slid before friction stops it.
@@ -90,18 +91,50 @@ export function candidateShots(state, { enemyTargetsOnly, angleSteps, powerSteps
 // Pieces near the edge are easier to knock off next time.
 const edgeCloseness = (p) => Math.max(Math.abs(p.x), Math.abs(p.z)) / PLAY_HALF;
 
+// What the traitor check is expected to cost the owner of a checker overhanging by a given
+// depth, in checkers: one if it goes out, two if it turns, a checker lost and one gained by the
+// other side. Worked out once from the check itself, in steps of OVERHANG_STEP; landings on
+// other checkers are left out.
+const OVERHANG_STEP = 0.025;
+const OVERHANG_COST = Array.from(
+  { length: Math.ceil(PIECE_RADIUS / OVERHANG_STEP) + 1 },
+  (_, i) => {
+    const depth = Math.max(MIN_OVERHANG + 1e-9, i * OVERHANG_STEP);
+    const { out, turned } = tossOdds(depth, { samples: 1500, random: seeded(i + 1) });
+    return out + 2 * turned;
+  },
+);
+
+export function overhangCost(p) {
+  const depth = overhang(p);
+  if (depth <= MIN_OVERHANG) return 0;
+  return OVERHANG_COST[Math.min(OVERHANG_COST.length - 1, Math.round(depth / OVERHANG_STEP))];
+}
+
+// The bot's own idea of chance must not differ between workers, or their scores disagree.
+function seeded(seed) {
+  let a = seed;
+  return () => {
+    a = (a * 1664525 + 1013904223) % 4294967296;
+    return a / 4294967296;
+  };
+}
+
 /**
- * Enemy pieces knocked off minus own pieces lost. A small bonus for leaving enemy pieces near
- * the edge and own pieces away from it, worth less than one piece in total, picks between shots
- * that knock nothing off.
+ * Enemy pieces knocked off minus own pieces lost. With the traitor check on, a piece left
+ * overhanging counts as the share of a piece the check is expected to take from its side.
+ * Otherwise a small bonus for leaving enemy pieces near the edge and own pieces away from it,
+ * worth less than one piece in total, picks between shots that knock nothing off.
  */
-export function scoreOutcome(before, after, side) {
+export function scoreOutcome(before, after, side, { traitorCheck = false } = {}) {
   let score = 0;
   for (const p of after) {
-    const sign = p.color === side ? -1 : 1;
+    const sign = sideOf(p) === side ? -1 : 1;
     const wasOn = before.find((b) => b.id === p.id).onBoard;
     if (wasOn && !p.onBoard) score += sign;
-    else if (p.onBoard) score += (sign * edgeCloseness(p)) / 20;
+    else if (!p.onBoard) continue;
+    else if (traitorCheck && overhang(p) > MIN_OVERHANG) score += sign * overhangCost(p);
+    else score += (sign * edgeCloseness(p)) / 20;
   }
   return score;
 }
@@ -113,6 +146,7 @@ export function evaluateShot(state, shot, level, random = Math.random) {
       state.pieces,
       simulateShot(state.pieces, played, { record: false }).pieces,
       state.turn,
+      state,
     );
   if (!samples) return outcome(shot);
   if (worstCase) {
@@ -133,7 +167,7 @@ export function shotsFor(state, level) {
   const options = { ...LEVELS[level] };
   // Against a lone enemy piece, nudging own pieces about and waiting for the opponent to miss
   // wins, but drags every round out. Only shots straight at it are allowed.
-  const enemies = state.pieces.filter((p) => p.onBoard && p.color === opponent(state.turn));
+  const enemies = state.pieces.filter((p) => p.onBoard && sideOf(p) === opponent(state.turn));
   if (options.attackLastPiece && enemies.length === 1) options.enemyTargetsOnly = true;
   // A bot with no shot of its own kind (every enemy hidden, or slipping between grid lines)
   // falls back to any contact, on the fine grid as a last resort.

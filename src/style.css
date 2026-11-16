@@ -146,6 +146,23 @@ body {
   font-size: 0.85em;
 }
 
+.option {
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  padding: 0.3em 0.9em 0.3em 0.6em;
+  border-radius: 999px;
+  background: var(--panel);
+  border: 1px solid rgb(241 220 180 / 0.35);
+  font-size: 0.85em;
+  cursor: pointer;
+}
+
+.option input {
+  margin: 0;
+  accent-color: var(--light-piece);
+}
+
 .player-pick select {
   font: inherit;
   color: var(--text);

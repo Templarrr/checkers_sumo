@@ -63,6 +63,16 @@ function cameraSide() {
   return humans.length === 1 ? humans[0] : state.turn;
 }
 
+// The traitor check is on unless switched off, and the choice is remembered like the players.
+const traitorBox = $('traitor-check');
+const traitorKey = 'checkersSumo.traitorCheck';
+try {
+  traitorBox.checked = localStorage.getItem(traitorKey) !== 'off';
+} catch {
+  // Storage blocked: keep the default.
+}
+const freshMatch = () => newMatch({ traitorCheck: traitorBox.checked });
+
 const sound = createSound();
 const soundToggle = $('sound-toggle');
 function showSoundToggle() {
@@ -75,7 +85,7 @@ soundToggle.addEventListener('click', () => {
 });
 showSoundToggle();
 
-let state = newMatch();
+let state = freshMatch();
 // Bumped whenever play restarts, so a shot still being chosen or replayed for an abandoned
 // game is dropped.
 let game = 0;
@@ -91,13 +101,29 @@ function showStatus(text) {
   $('rows').innerHTML = `Round ${state.round} · ${side(LIGHT)} · ${side(DARK)}`;
 }
 
+// What the traitor check did, from the checkers before and after it.
+function checkSummary({ before, after }) {
+  const was = new Map(before.map((p) => [p.id, p]));
+  const traitors = after.filter((p) => p.flipped && !was.get(p.id).flipped).length;
+  const home = after.filter((p) => !p.flipped && was.get(p.id).flipped).length;
+  const lost = before.length - after.length;
+  const parts = [];
+  if (traitors) parts.push(traitors > 1 ? `${traitors} traitors` : 'a traitor');
+  if (home) parts.push(`${home} back home`);
+  if (lost) parts.push(`${lost} lost`);
+  return `Traitor check: ${parts.length ? parts.join(', ') : 'all stay loyal'}`;
+}
+
 function shotSummary(lastShot) {
   if (!lastShot) return null;
-  const { shooter, knockedOff, ownLost, extraShot } = lastShot;
-  if (extraShot) return `Hit! ${NAMES[shooter]} shoots again`;
-  if (ownLost && knockedOff) return `Both sides lost pieces · ${NAMES[state.turn]}'s turn`;
-  if (ownLost) return `Own piece off · ${NAMES[state.turn]}'s turn`;
-  return null;
+  const { shooter, knockedOff, ownLost, ownTurned, extraShot, check } = lastShot;
+  const turn = `${NAMES[state.turn]}'s turn`;
+  let text = null;
+  if (extraShot) text = `Hit! ${NAMES[shooter]} shoots again`;
+  else if (knockedOff && (ownLost || ownTurned)) text = `Both sides lost pieces · ${turn}`;
+  else if (ownLost || ownTurned) text = `Own piece lost · ${turn}`;
+  if (check) return `${checkSummary(check)} · ${text ?? turn}`;
+  return text;
 }
 
 function showRoundOver() {
@@ -156,6 +182,15 @@ async function play() {
       onLand: () => sound.thud(),
     });
     if (current !== game) return;
+    const { check } = result.state.lastShot;
+    if (check) {
+      showStatus('Traitor check…');
+      await piecesView.playCheck(check.tosses, {
+        onHit: (strength) => sound.clack(strength),
+        onLand: () => sound.thud(),
+      });
+      if (current !== game) return;
+    }
     state = result.state;
     piecesView.sync(state.pieces);
   }
@@ -172,13 +207,21 @@ function startRound(next) {
 }
 
 $('round-next').addEventListener('click', () => {
-  startRound(state.matchWinner ? newMatch() : nextRound(state));
+  startRound(state.matchWinner ? freshMatch() : nextRound(state));
 });
-$('new-game').addEventListener('click', () => startRound(newMatch()));
+$('new-game').addEventListener('click', () => startRound(freshMatch()));
+traitorBox.addEventListener('change', () => {
+  try {
+    localStorage.setItem(traitorKey, traitorBox.checked ? 'on' : 'off');
+  } catch {
+    // Not remembered, as with the players.
+  }
+  startRound(freshMatch());
+});
 for (const color of [LIGHT, DARK]) {
   pickers[color].addEventListener('change', () => {
     setPlayer(color, pickers[color].value);
-    startRound(newMatch());
+    startRound(freshMatch());
   });
   setPlayer(color, savedPlayer(color));
 }
@@ -187,6 +230,8 @@ startRound(state);
 // Lets scripted browser checks play shots without simulating pointer drags.
 window.checkersSumo = {
   getState: () => state,
+  // Starts play from a given position, such as one with a checker hanging over the edge.
+  load: (position) => startRound({ ...state, ...position }),
   shoot: (shot) => aim.shoot(shot),
   // Where a piece is on screen, in CSS pixels, so a script can drag it like a player would.
   screenOf(pieceId) {

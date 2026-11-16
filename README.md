@@ -20,7 +20,8 @@ rendered in 3D with [three.js](https://threejs.org/).
 - A flick never goes exactly where you aimed: it turns by a random angle of up to 5° either way
   for the softest shot, growing to 15° for a full-strength one.
 - If your shot knocks off at least one enemy checker and none of your own, you shoot again.
-  Otherwise the turn passes to your opponent.
+  Otherwise the turn passes to your opponent. Losing one of your own checkers in the traitor
+  check below, or seeing one turn traitor, also passes the turn.
 - The round ends when only one colour is left on the board. The winner's checkers line up one
   row further forward and the loser stays where they were; the loser shoots first in the next
   round.
@@ -31,8 +32,35 @@ rendered in 3D with [three.js](https://threejs.org/).
 - If both sides lose their last checker in the same shot, nobody wins the round and it is
   replayed from the same rows; the side that did not take that shot starts.
 
-Not included (yet): the "traitor" rule for a checker flipped upside down, since checkers here
-slide flat, and regional variants like "scissors" or stacking a second checker.
+### Traitor check (optional, on by default)
+
+Checkers slide flat, so a shot alone never flips one over. But a checker can end a shot hanging
+over the edge of the board without falling off, and then, before the next shot, it goes through
+a traitor check. Untick **Traitor check** at the bottom of the screen to play without it.
+
+![Two traitors: a light checker flipped to show its dark heart, and a dark one showing its light heart](docs/screenshots/traitors.png)
+
+- A checker counts as hanging over the edge when it sticks out past the frame by more than
+  1/16 of its width (about a finger's tip), with its centre still on the board.
+- Each such checker, one after another, is flicked up from under its overhanging rim. It spins
+  through 2 to 10 half-flips, each count equally likely, and comes down somewhere else: the
+  harder the flick, the more it spins and the further it drifts. It drifts back over the board
+  more often than not, since the flick comes from outside, but it can go up to 135° either side
+  of straight in, so it can also fly back out.
+- If it comes down past the edge, it is out. If it comes down hanging over the edge again, it is
+  flicked again.
+- If it comes down on the board the same way up, nothing changes. If it comes down flipped over,
+  it is a **traitor** and plays for the other side from then on: it can be flicked by that side,
+  counts as one of their checkers and wins rounds for them. The underside of every checker has a
+  heart of the other side's wood, so a traitor shows it. A traitor flipped over again goes back
+  home to its own side.
+- Any checker it comes down on is crushed and leaves the board.
+- The odds depend on how far the checker hangs out. One that only just sticks out is lost about
+  1 time in 6, turns about 2 in 5 and stays as it was otherwise; one about to fall is lost
+  4 times in 10 and turns 3 in 10.
+- Every round starts with every checker the right way up.
+
+Not included (yet): regional variants like "scissors" or stacking a second checker.
 
 ## How to play
 
@@ -81,7 +109,8 @@ Code style is enforced with [ESLint](https://eslint.org/) for code quality and
 
 - `src/game/`: the game itself, with no rendering. `physics.js` plays out a flick
   deterministically (sliding friction, checker collisions, falling off the edge); `rules.js`
-  turns the result into the game rules: whose turn it is, rounds, rows and the winner.
+  turns the result into the game rules: whose turn it is, rounds, rows and the winner;
+  `traitors.js` runs the traitor check.
 - `src/render/`: three.js scene, board, checkers, shot replay and the slingshot aiming.
 - `src/players/`: who chooses the shots: the human (one instance serves both sides in hot seat)
   and the bots.
@@ -97,7 +126,10 @@ Players are wired up in the `PLAYERS` map in `src/main.js`.
 Both bots (`src/players/bot.js`) try every shot on a grid of directions and power steps,
 keep only the ones that would run straight into a piece and are strong enough to reach it,
 play each one out with `simulateShot` and pick the best score: enemy checkers knocked off minus
-their own lost, with a tiny bonus for enemy checkers left near the edge to break ties.
+their own lost, with a tiny bonus for enemy checkers left near the edge to break ties. With
+the traitor check on, a checker left hanging over the edge counts as most of a checker lost to its
+side: the bots know the odds of the check and count a turned checker twice, once lost and once
+gained by the other side. They do not foresee checkers crushed by a landing.
 
 - **Easy** tries 5° and 25% power steps, only aims straight at enemy checkers and assumes every
   shot goes exactly where it aims. Its chosen aim is then turned by a random angle of up to 5°
