@@ -69,14 +69,14 @@ describe('playShot', () => {
     expect(state.turn).toBe(DARK);
   });
 
-  it('ends the round when one side has no pieces left, and the winner starts the next one', () => {
+  it('ends the round when one side has no pieces left, and the loser starts the next one', () => {
     const start = position([piece(0, LIGHT, 0, 0), piece(1, DARK, 0, -3.5)]);
     const { state } = playShot(start, knockout, exact);
     expect(state.roundWinner).toBe(LIGHT);
     expect(state.nextRows).toEqual({ [LIGHT]: 1, [DARK]: 0 });
     const round2 = nextRound(state);
     expect(round2.round).toBe(2);
-    expect(round2.turn).toBe(LIGHT);
+    expect(round2.turn).toBe(DARK);
     expect(countPieces(round2.pieces, LIGHT)).toBe(8);
     expect(round2.pieces.find((p) => p.color === LIGHT).z).toBe(2.5);
   });
@@ -122,10 +122,10 @@ describe('rowsAfterRound', () => {
 describe('scatterShot', () => {
   const degreesOff = (shot) => (Math.abs(Math.atan2(shot.vx, -shot.vz)) * 180) / Math.PI;
 
-  it('turns a weak flick by at most 3 degrees and a full-power one by at most 10', () => {
+  it('turns a weak flick by at most 5 degrees and a full-power one by at most 15', () => {
     for (const random of [() => 0, () => 1]) {
-      expect(degreesOff(scatterShot({ pieceId: 0, vx: 0, vz: -0.001 }, random))).toBeCloseTo(3);
-      expect(degreesOff(scatterShot({ pieceId: 0, vx: 0, vz: -11 }, random))).toBeCloseTo(10);
+      expect(degreesOff(scatterShot({ pieceId: 0, vx: 0, vz: -0.001 }, random))).toBeCloseTo(5);
+      expect(degreesOff(scatterShot({ pieceId: 0, vx: 0, vz: -11 }, random))).toBeCloseTo(15);
     }
   });
 
@@ -133,7 +133,7 @@ describe('scatterShot', () => {
     for (let i = 0; i < 50; i++) {
       const shot = scatterShot({ pieceId: 0, vx: 0, vz: -50 });
       expect(Math.hypot(shot.vx, shot.vz)).toBeCloseTo(11);
-      expect(degreesOff(shot)).toBeLessThanOrEqual(10.0001);
+      expect(degreesOff(shot)).toBeLessThanOrEqual(15.0001);
     }
   });
 

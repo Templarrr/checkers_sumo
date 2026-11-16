@@ -1,7 +1,7 @@
 # Checkers Sumo
 
-Flick your checkers to knock your opponent's off the board. A browser game based on the
-traditional Chapaev rules, rendered in 3D with [three.js](https://threejs.org/).
+Flick your checkers to knock your opponent's off the board. A browser board game,
+rendered in 3D with [three.js](https://threejs.org/).
 
 **Play it:** https://templarrr.github.io/checkers_sumo/ (once GitHub Pages is switched on, see
 [Deploying](#deploying-to-github-pages))
@@ -17,12 +17,13 @@ traditional Chapaev rules, rendered in 3D with [three.js](https://threejs.org/).
 - On your turn you flick one of your own checkers. The board has a wooden frame around the
   cells; a checker that stops on the frame is still in play. Every checker whose centre ends up
   past the outer edge of the frame falls off and is out of the round.
-- A flick never goes exactly where you aimed: it turns by a random angle of up to 3° either way
-  for the softest shot, growing to 10° for a full-strength one.
+- A flick never goes exactly where you aimed: it turns by a random angle of up to 5° either way
+  for the softest shot, growing to 15° for a full-strength one.
 - If your shot knocks off at least one enemy checker and none of your own, you shoot again.
   Otherwise the turn passes to your opponent.
-- The round ends when only one colour is left on the board. The winner starts the next round,
-  and their checkers line up one row further forward. The loser stays where they were.
+- The round ends when only one colour is left on the board. The winner's checkers line up one
+  row further forward and the loser stays where they were; the loser shoots first in the next
+  round.
 - Once the two lines would meet, winning a round still moves you forward one row, and the loser
   is pushed back one row instead.
 - When the loser has no row left to be pushed back to, the winner has crossed the whole board
@@ -80,7 +81,7 @@ Code style is enforced with [ESLint](https://eslint.org/) for code quality and
 
 - `src/game/`: the game itself, with no rendering. `physics.js` plays out a flick
   deterministically (sliding friction, checker collisions, falling off the edge); `rules.js`
-  turns the result into Chapaev rules: whose turn it is, rounds, rows and the winner.
+  turns the result into the game rules: whose turn it is, rounds, rows and the winner.
 - `src/render/`: three.js scene, board, checkers, shot replay and the slingshot aiming.
 - `src/players/`: who chooses the shots: the human (one instance serves both sides in hot seat)
   and the bots.
@@ -107,6 +108,10 @@ their own lost, with a tiny bonus for enemy checkers left near the edge to break
 Medium tries well over 100,000 shots on a full board, so the search runs in Web Workers
 (`src/players/botPlayer.js`), split across the CPU's cores, and the page keeps animating while a
 bot thinks. A Hard bot would be another entry in `LEVELS` in `bot.js`.
+
+To compare bots, `npm run tournament -- 50 medium easy` plays 50 games between them without
+rendering, alternating who shoots first, and prints the wins for each. It uses every CPU core
+and takes a while: a Medium vs Easy game is a few minutes of search on one core.
 
 ## Deploying to GitHub Pages
 

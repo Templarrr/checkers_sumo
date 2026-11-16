@@ -75,8 +75,8 @@ export function shotError(state, { pieceId, vx, vz }) {
 
 // A real flick never goes exactly where it was aimed, and the harder it is the further off it can
 // go: up to this many degrees either way at the weakest and the strongest shot.
-export const MIN_SPREAD_DEGREES = 3;
-export const MAX_SPREAD_DEGREES = 10;
+export const MIN_SPREAD_DEGREES = 5;
+export const MAX_SPREAD_DEGREES = 15;
 
 export const spreadDegrees = (power) =>
   MIN_SPREAD_DEGREES + (MAX_SPREAD_DEGREES - MIN_SPREAD_DEGREES) * power;
@@ -91,7 +91,7 @@ export function scatterShot({ pieceId, vx, vz }, random = Math.random) {
 
 /**
  * Plays `shot` for the side to move, as aimed but scattered by `random`, and applies the
- * Chapaev rules to the result. Returns the new state, the shot as actually played and the
+ * game rules to the result. Returns the new state, the shot as actually played and the
  * simulation, which the renderer replays.
  */
 export function playShot(state, shot, { random = Math.random } = {}) {
@@ -127,7 +127,8 @@ export function playShot(state, shot, { random = Math.random } = {}) {
       const winner = lightLeft > 0 ? LIGHT : DARK;
       next.roundWinner = winner;
       next.nextRows = rowsAfterRound(state.rows, winner);
-      next.turn = winner;
+      // The loser opens the next round, so a winner cannot sweep round after round unanswered.
+      next.turn = opponent(winner);
       if (next.nextRows[opponent(winner)] < 0) next.matchWinner = winner;
     }
   }
