@@ -44,7 +44,15 @@ function inlayGeometry() {
 function buildMaterials() {
   const make = (body, inlay, seed) => ({
     body: woodMaterial(body, { seed, roughness: 0.45 }),
-    inlay: new THREE.MeshStandardMaterial({ color: inlay, roughness: 0.4, metalness: 0.1 }),
+    inlay: new THREE.MeshStandardMaterial({
+      color: inlay,
+      roughness: 0.4,
+      metalness: 0.1,
+      // The ring floats a hair above the dish; this keeps it on top with a coarse depth buffer.
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+      polygonOffsetUnits: -4,
+    }),
   });
   return {
     light: make(PALETTE.lightPiece, PALETTE.lightPieceInlay, 13),

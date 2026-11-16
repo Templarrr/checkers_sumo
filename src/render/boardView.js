@@ -32,18 +32,36 @@ function buildSquares() {
 }
 
 // The frame is flush with the cells, so pieces slide onto it and stay in play until they pass
-// its outer edge.
+// its outer edge. It is a ring around the cells rather than a block under them: two surfaces this
+// close together flicker through each other on GPUs with a coarse depth buffer, as on many phones.
 function buildFrame() {
-  const size = PLAY_HALF * 2;
   const height = SQUARE_HEIGHT + BASE_HEIGHT;
-  const frame = new THREE.Mesh(
-    new THREE.BoxGeometry(size, height, size),
-    woodMaterial(PALETTE.frame, { seed: 7, repeat: 2, roughness: 0.6 }),
-  );
-  // A hair below the cells' tops, so the cells always win the depth test where they overlap.
-  frame.position.y = -height / 2 - 0.001;
-  frame.castShadow = true;
-  frame.receiveShadow = true;
+  const material = woodMaterial(PALETTE.frame, { seed: 7, repeat: 2, roughness: 0.6 });
+  const square = (half) =>
+    new THREE.Path()
+      .moveTo(-half, -half)
+      .lineTo(half, -half)
+      .lineTo(half, half)
+      .lineTo(-half, half);
+  const outline = new THREE.Shape(square(PLAY_HALF).getPoints());
+  outline.holes.push(square(HALF));
+  const ringGeometry = new THREE.ExtrudeGeometry(outline, { depth: height, bevelEnabled: false });
+  // Extruded UVs are in board units; bring them to 0..1 across the frame like a box's top.
+  const uv = ringGeometry.attributes.uv;
+  for (let i = 0; i < uv.count; i++) {
+    uv.setXY(i, uv.getX(i) / (PLAY_HALF * 2) + 0.5, uv.getY(i) / (PLAY_HALF * 2) + 0.5);
+  }
+  ringGeometry.rotateX(Math.PI / 2);
+  const ring = new THREE.Mesh(ringGeometry, material);
+  // Under the cells, out of sight, so nothing shows through a gap between them.
+  const base = new THREE.Mesh(new THREE.BoxGeometry(HALF * 2, BASE_HEIGHT, HALF * 2), material);
+  base.position.y = -SQUARE_HEIGHT - BASE_HEIGHT / 2;
+  const frame = new THREE.Group();
+  for (const mesh of [ring, base]) {
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    frame.add(mesh);
+  }
   return frame;
 }
 
@@ -63,6 +81,10 @@ function labelMesh(text) {
     map: texture,
     transparent: true,
     depthWrite: false,
+    // Lifted in depth too, or a coarse depth buffer lets the frame poke through the letters.
+    polygonOffset: true,
+    polygonOffsetFactor: -2,
+    polygonOffsetUnits: -4,
   });
   const mesh = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 0.4), material);
   mesh.rotation.x = -Math.PI / 2;
