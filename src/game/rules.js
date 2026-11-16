@@ -110,25 +110,32 @@ export function playShot(state, shot, { random = Math.random } = {}) {
   let pieces = simulation.pieces.filter((p) => p.onBoard);
 
   const lost = (color) => countPieces(state.pieces, color) - countPieces(pieces, color);
-  const knockedOff = lost(opponent(shooter));
+  let knockedOff = lost(opponent(shooter));
   let ownLost = lost(shooter);
   let ownTurned = 0;
+  let enemyTurned = 0;
   let check = null;
   if (state.traitorCheck && pieces.some(overhangs)) {
     const result = traitorCheck(pieces, random);
     check = { before: pieces, after: result.pieces, tosses: result.tosses };
-    // Losing your own checkers in the check, or seeing them turn traitor, counts like losing
-    // them to your own shot.
+    // Whatever the check takes off the board counts as if the shot had knocked it off, and a
+    // checker that changes side counts as lost by the side it left.
     const after = new Map(check.after.map((p) => [p.id, p]));
     for (const p of pieces) {
-      if (sideOf(p) !== shooter) continue;
-      if (!after.has(p.id)) ownLost++;
-      else if (sideOf(after.get(p.id)) !== shooter) ownTurned++;
+      const own = sideOf(p) === shooter;
+      if (!after.has(p.id)) {
+        if (own) ownLost++;
+        else knockedOff++;
+      } else if (sideOf(after.get(p.id)) !== sideOf(p)) {
+        if (own) ownTurned++;
+        else enemyTurned++;
+      }
     }
     pieces = check.after;
   }
-  // A clean hit (at least one enemy off, none of your own lost or turned) earns another shot.
-  const extraShot = knockedOff > 0 && ownLost === 0 && ownTurned === 0;
+  // A clean hit (the other side down at least one checker, none of your own lost or turned)
+  // earns another shot.
+  const extraShot = knockedOff + enemyTurned > 0 && ownLost === 0 && ownTurned === 0;
 
   const next = {
     ...state,
@@ -139,6 +146,7 @@ export function playShot(state, shot, { random = Math.random } = {}) {
       knockedOff,
       ownLost,
       ownTurned,
+      enemyTurned,
       extraShot,
       check,
     },
