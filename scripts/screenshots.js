@@ -42,6 +42,28 @@ const desktop = await open({ viewport: { width: 1280, height: 800 }, deviceScale
 await setUpAiming(desktop);
 await aimWith(desktop, 120);
 await desktop.screenshot({ path: `${OUT}/desktop.png` });
+await desktop.close();
+
+// A game under way with two traitors: each flipped checker shows the other side's heart.
+const traitors = await open({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 2 });
+await traitors.evaluate(() => {
+  const at = (id, color, x, z, flipped = false) => ({ id, color, x, z, onBoard: true, flipped });
+  window.checkersSumo.load({
+    turn: 'light',
+    pieces: [
+      at(0, 'light', -2.5, 3.5),
+      at(2, 'light', 0.5, 1.5),
+      at(4, 'light', 1.6, -1.2, true),
+      at(6, 'light', 3.5, 3.5),
+      at(9, 'dark', -1.5, -3.5),
+      at(11, 'dark', -0.6, 0.4, true),
+      at(13, 'dark', 2.5, -2.5),
+    ],
+  });
+});
+await traitors.waitForTimeout(1500);
+await traitors.screenshot({ path: `${OUT}/traitors.png` });
+await traitors.close();
 
 const phone = await open({ ...devices['iPhone 13'], hasTouch: false, isMobile: false });
 await setUpAiming(phone);

@@ -6,8 +6,10 @@ import {
   PIECES_PER_SIDE,
   PIECE_RADIUS,
   opponent,
+  sideOf,
 } from './constants.js';
 import { MAX_SPEED, simulateShot } from './physics.js';
+import { overhangs, traitorCheck } from './traitors.js';
 
 export const DRAW = 'draw';
 
@@ -27,16 +29,18 @@ export function setupPieces(rows) {
         x: file - HALF + 0.5,
         z: rowZ(color, rows[color]),
         onBoard: true,
+        flipped: false,
       });
     }
   }
   return pieces;
 }
 
-function startRound(round, rows, starter) {
+function startRound(round, rows, starter, traitorCheck) {
   return {
     round,
     rows,
+    traitorCheck,
     turn: starter,
     pieces: setupPieces(rows),
     lastShot: null,
@@ -46,10 +50,12 @@ function startRound(round, rows, starter) {
   };
 }
 
-export const newMatch = () => startRound(1, { [LIGHT]: 0, [DARK]: 0 }, LIGHT);
+/** `traitorCheck` switches on the check of overhanging checkers after each shot. */
+export const newMatch = ({ traitorCheck = true } = {}) =>
+  startRound(1, { [LIGHT]: 0, [DARK]: 0 }, LIGHT, traitorCheck);
 
 export const countPieces = (pieces, color) =>
-  pieces.filter((p) => p.onBoard && p.color === color).length;
+  pieces.filter((p) => p.onBoard && sideOf(p) === color).length;
 
 /**
  * Where both sides line up after `winner` takes a round. The winner moves one row forward;
@@ -67,7 +73,7 @@ export function shotError(state, { pieceId, vx, vz }) {
   if (state.roundWinner) return 'The round is over';
   const piece = state.pieces.find((p) => p.id === pieceId);
   if (!piece || !piece.onBoard) return 'That piece is not on the board';
-  if (piece.color !== state.turn) return `It is ${state.turn}'s turn`;
+  if (sideOf(piece) !== state.turn) return `It is ${state.turn}'s turn`;
   if (!Number.isFinite(vx) || !Number.isFinite(vz) || (vx === 0 && vz === 0))
     return 'A shot needs a direction';
   return null;
@@ -90,9 +96,10 @@ export function scatterShot({ pieceId, vx, vz }, random = Math.random) {
 }
 
 /**
- * Plays `shot` for the side to move, as aimed but scattered by `random`, and applies the
- * game rules to the result. Returns the new state, the shot as actually played and the
- * simulation, which the renderer replays.
+ * Plays `shot` for the side to move, as aimed but scattered by `random`, runs the traitor
+ * check if it is on and anything overhangs, and applies the game rules to the result. Returns
+ * the new state, the shot as actually played and the simulation; the renderer replays the
+ * simulation and then `state.lastShot.check.tosses` (`check` is null when there was none).
  */
 export function playShot(state, shot, { random = Math.random } = {}) {
   const error = shotError(state, shot);
@@ -100,19 +107,41 @@ export function playShot(state, shot, { random = Math.random } = {}) {
   const shooter = state.turn;
   const played = scatterShot(shot, random);
   const simulation = simulateShot(state.pieces, played);
-  const pieces = simulation.pieces.filter((p) => p.onBoard);
+  let pieces = simulation.pieces.filter((p) => p.onBoard);
 
   const lost = (color) => countPieces(state.pieces, color) - countPieces(pieces, color);
   const knockedOff = lost(opponent(shooter));
-  const ownLost = lost(shooter);
-  // A clean hit (at least one enemy off, none of your own) earns another shot.
-  const extraShot = knockedOff > 0 && ownLost === 0;
+  let ownLost = lost(shooter);
+  let ownTurned = 0;
+  let check = null;
+  if (state.traitorCheck && pieces.some(overhangs)) {
+    const result = traitorCheck(pieces, random);
+    check = { before: pieces, after: result.pieces, tosses: result.tosses };
+    // Losing your own checkers in the check, or seeing them turn traitor, counts like losing
+    // them to your own shot.
+    const after = new Map(check.after.map((p) => [p.id, p]));
+    for (const p of pieces) {
+      if (sideOf(p) !== shooter) continue;
+      if (!after.has(p.id)) ownLost++;
+      else if (sideOf(after.get(p.id)) !== shooter) ownTurned++;
+    }
+    pieces = check.after;
+  }
+  // A clean hit (at least one enemy off, none of your own lost or turned) earns another shot.
+  const extraShot = knockedOff > 0 && ownLost === 0 && ownTurned === 0;
 
   const next = {
     ...state,
     pieces,
     turn: extraShot ? shooter : opponent(shooter),
-    lastShot: { shooter, knockedOff, ownLost, extraShot },
+    lastShot: {
+      shooter,
+      knockedOff,
+      ownLost,
+      ownTurned,
+      extraShot,
+      check,
+    },
   };
 
   const lightLeft = countPieces(pieces, LIGHT);
@@ -138,7 +167,7 @@ export function playShot(state, shot, { random = Math.random } = {}) {
 export function nextRound(state) {
   if (!state.roundWinner) throw new Error('The round is still being played');
   if (state.matchWinner) throw new Error('The match is over');
-  return startRound(state.round + 1, state.nextRows, state.turn);
+  return startRound(state.round + 1, state.nextRows, state.turn, state.traitorCheck);
 }
 
 // Lets the input layer find a piece under the pointer generously, for fingers on small screens.
@@ -146,7 +175,7 @@ export function pieceNear(state, x, z, color, reach = PIECE_RADIUS * 1.4) {
   let best = null;
   let bestDistance = reach;
   for (const p of state.pieces) {
-    if (!p.onBoard || p.color !== color) continue;
+    if (!p.onBoard || sideOf(p) !== color) continue;
     const distance = Math.hypot(p.x - x, p.z - z);
     if (distance <= bestDistance) {
       best = p;

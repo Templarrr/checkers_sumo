@@ -16,3 +16,6 @@ export const PLAY_HALF = HALF + FRAME_MARGIN;
 // Row 0 is a side's own back row. Once the two rows are adjacent there is no room to advance
 // without pushing the loser back.
 export const LAST_FREE_ROWS = BOARD_SIZE - 2;
+
+// A checker flipped upside down by the traitor check plays for the other side.
+export const sideOf = (piece) => (piece.flipped ? opponent(piece.color) : piece.color);

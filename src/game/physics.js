@@ -108,9 +108,8 @@ export function simulateShot(pieces, { pieceId, vx, vz }, { record: keep = true 
     }
   }
 
-  const final = pieces.map(({ id, color }, i) => ({
-    id,
-    color,
+  const final = pieces.map((p, i) => ({
+    ...p,
     x: x[i],
     z: z[i],
     onBoard: !!on[i],
